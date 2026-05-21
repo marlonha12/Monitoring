@@ -26,11 +26,12 @@ bot = Bot(token=BOT_TOKEN)
 storage = MemoryStorage()
 dp = Dispatcher(storage=storage)
 
-# Инициализация OWM с конфигурацией на русском языке
-owm = pyowm.OWM(OWM_API_KEY)
+# Исправленная инициализация OWM с конфигурацией на русском языке
 config_dict = pyowm.utils.config.get_default_config()
 config_dict['language'] = 'ru'  # Запрашиваем данные у сервера на русском
-mgr = owm.weather_manager(config_dict=config_dict)
+
+owm = pyowm.OWM(OWM_API_KEY, config_dict=config_dict)
+mgr = owm.weather_manager()
 
 # Клавиатура главного меню
 main_keyboard = ReplyKeyboardMarkup(
@@ -70,7 +71,7 @@ def get_weather_text(city_name: str) -> str:
         feels_like = weather.temperature('celsius')['feels_like']
         humidity = weather.humidity
         wind = weather.wind()['speed']
-        status = weather.detailed_status  # Здесь будет текст на русском (например, "пасмурно")
+        status = weather.detailed_status  # Текст на русском (например, "пасмурно")
         pressure = weather.pressure['press']
         
         # Эмодзи подбираем по базовому английскому статусу, так как он стабилен в API
