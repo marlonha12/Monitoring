@@ -26,13 +26,11 @@ bot = Bot(token=BOT_TOKEN)
 storage = MemoryStorage()
 dp = Dispatcher(storage=storage)
 
-# ПРАВИЛЬНАЯ НАСТРОЙКА ЯЗЫКА ДЛЯ PYOWM
-config_dict = pyowm.utils.config.get_default_config()
-config_dict['language'] = 'ru'  # Запрашиваем данные у сервера на русском
-
-# Передаем конфигурацию только сюда! Внутри weather_manager() ничего лишнего не пишем.
-owm = pyowm.OWM(OWM_API_KEY, config_dict=config_dict)
+# ЖЕЛЕЗОБЕТОННЫЙ СПОСОБ НАСТРОЙКИ РУССКОГО ЯЗЫКА
+owm = pyowm.OWM(OWM_API_KEY)
 mgr = owm.weather_manager()
+# Меняем язык напрямую в словаре конфигурации менеджера
+mgr.config['language'] = 'ru'
 
 # Клавиатура главного меню
 main_keyboard = ReplyKeyboardMarkup(
