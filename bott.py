@@ -63,7 +63,7 @@ class WeatherStates(StatesGroup):
 user_settings = {}
 
 def get_status_emoji(status_text: str) -> str:
-    """Вспомогательная функция для подбора эмодзи по русскому описанию погоды"""
+    """Подбор эмодзи по русскому описанию погоды"""
     status = status_text.lower()
     if "ясно" in status or "солнечно" in status:
         return "☀️"
@@ -73,7 +73,7 @@ def get_status_emoji(status_text: str) -> str:
         return "☁️"
     elif "дождь" in status or "ливень" in status or "морось" in status:
         return "🌧"
-    elif "гроза" in status:
+    elif "groza" in status or "гроза" in status:
         return "⛈"
     elif "снег" in status or "метель" in status or "снегопад" in status:
         return "❄️"
@@ -97,20 +97,8 @@ def get_weather_text(city_name: str) -> str:
         status = weather.detailed_status
         status_emoji = get_status_emoji(status)
         
-        # Главный эмодзи для заголовка
-        main_emoji = {
-            'clear': '☀️',
-            'clouds': '☁️',
-            'rain': '🌧',
-            'snow': '❄️',
-            'thunderstorm': '⛈',
-            'mist': '🌫',
-            'fog': '🌫'
-        }.get(weather.status.lower(), '🌡')
-        
-        # Конструкция "в городе {Название}" решает проблему со склонениями
         return (
-            f"{main_emoji} Погода в городе {city_name.title()}:\n\n"
+            f"🌍 Погода в городе {city_name.title()}:\n\n"
             f"🌡 Температура: {temp:.1f}°C (ощущается как {feels_like:.1f}°C)\n"
             f"💧 Влажность: {humidity}%\n"
             f"💨 Ветер: {wind:.1f} м/с\n"
@@ -292,7 +280,7 @@ async def back_to_menu(message: Message):
 
 async def main():
     asyncio.create_task(check_and_notify())
-    print("Бот запущен и готов к работе!")
+    print("🤖 Бот запущен и готов к работе!")
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
