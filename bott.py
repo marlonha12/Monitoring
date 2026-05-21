@@ -12,7 +12,9 @@ from aiogram.fsm.storage.memory import MemoryStorage
 
 import pyowm
 from pyowm.commons.exceptions import NotFoundError, UnauthorizedError
+
 load_dotenv()
+
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 OWM_API_KEY = os.getenv("OWM_API_KEY")
 
@@ -24,10 +26,10 @@ bot = Bot(token=BOT_TOKEN)
 storage = MemoryStorage()
 dp = Dispatcher(storage=storage)
 
-# Инициализация OWM
+# Инициализация OWM с конфигурацией на русском языке
 owm = pyowm.OWM(OWM_API_KEY)
 config_dict = pyowm.utils.config.get_default_config()
-config_dict['language'] = 'ru'
+config_dict['language'] = 'ru'  # Запрашиваем данные у сервера на русском
 mgr = owm.weather_manager(config_dict=config_dict)
 
 # Клавиатура главного меню
@@ -68,10 +70,10 @@ def get_weather_text(city_name: str) -> str:
         feels_like = weather.temperature('celsius')['feels_like']
         humidity = weather.humidity
         wind = weather.wind()['speed']
-        status = weather.detailed_status
+        status = weather.detailed_status  # Здесь будет текст на русском (например, "пасмурно")
         pressure = weather.pressure['press']
         
-        # Эмодзи для погоды
+        # Эмодзи подбираем по базовому английскому статусу, так как он стабилен в API
         weather_emoji = {
             'clear': '☀️',
             'clouds': '☁️',
@@ -116,13 +118,23 @@ def get_forecast_text(city_name: str) -> str:
                     break
                     
                 temp = weather.temperature('celsius')['temp']
-                status = weather.detailed_status
+                status = weather.detailed_status  # Подробный статус на русском языке
                 
-                # Эмодзи для прогноза
-                emoji = "☀️" if "clear" in status.lower() else "☁️" if "cloud" in status.lower() else "🌧" if "rain" in status.lower() else "❄️" if "snow" in status.lower() else "🌡"
+                # Присваиваем эмодзи, используя системный статус OWM
+                main_status = weather.status.lower()
+                if main_status == 'clear':
+                    emoji = "☀️"
+                elif main_status == 'clouds':
+                    emoji = "☁️"
+                elif main_status == 'rain':
+                    emoji = "🌧"
+                elif main_status == 'snow':
+                    emoji = "❄️"
+                else:
+                    emoji = "🌡"
                 
                 result += f"📅 {date.strftime('%d.%m.%Y')}:\n"
-                result += f"   {emoji} {temp:.1f}°C | {status}\n\n"
+                result += f"   {emoji} {temp:.1f}°C | {status.capitalize()}\n\n"
                 
                 last_date = date.date()
                 count += 1
@@ -304,7 +316,7 @@ async def main():
     # Запускаем фоновую задачу для уведомлений
     asyncio.create_task(check_and_notify())
     
-    print("Бот запущен!")
+    print("🤖 Бот запущен и готов к работе!")
     print(f"🔗 https://t.me/{(await bot.get_me()).username}")
     
     # Запускаем бота
