@@ -75,10 +75,9 @@ def get_weather_text(city_name: str) -> str:
         feels_like = weather.temperature('celsius')['feels_like']
         humidity = weather.humidity
         wind = weather.wind()['speed']
-        status = weather.detailed_status  # Текст на русском (например, "пасмурно")
+        status = weather.detailed_status  # Текст на русском
         pressure = weather.pressure['press']
         
-        # Эмодзи подбираем по базовому английскому статусу, так как он стабилен в API
         weather_emoji = {
             'clear': '☀️',
             'clouds': '☁️',
@@ -109,7 +108,6 @@ def get_forecast_text(city_name: str) -> str:
     """Получение прогноза на 5 дней"""
     try:
         forecast = mgr.forecast_at_place(city_name, '3h', limit=40)
-        
         result = f"📅 Прогноз погоды для {city_name.title()} на 5 дней:\n\n"
         
         last_date = None
@@ -117,15 +115,13 @@ def get_forecast_text(city_name: str) -> str:
         
         for weather in forecast.forecast:
             date = datetime.fromtimestamp(weather.reference_time())
-            # Показываем прогноз на середину дня
             if date.hour in [12, 15] and date.date() != last_date:
                 if count >= 5:
                     break
                     
                 temp = weather.temperature('celsius')['temp']
-                status = weather.detailed_status  # Подробный статус на русском языке
+                status = weather.detailed_status
                 
-                # Присваиваем эмодзи, используя системный статус OWM
                 main_status = weather.status.lower()
                 if main_status == 'clear':
                     emoji = "☀️"
@@ -145,7 +141,6 @@ def get_forecast_text(city_name: str) -> str:
                 count += 1
                 
         return result
-        
     except NotFoundError:
         return f"❌ Город '{city_name}' не найден."
     except Exception as e:
@@ -161,7 +156,6 @@ async def check_and_notify():
     """Фоновая задача для проверки и отправки уведомлений"""
     while True:
         await asyncio.sleep(60)
-        
         current_time = datetime.now().timestamp()
         
         for user_id, settings in user_settings.items():
@@ -175,7 +169,6 @@ async def check_and_notify():
 
 @dp.message(Command("start"))
 async def cmd_start(message: Message):
-    """Обработчик команды /start"""
     welcome_text = (
         "🌍 Привет! Я бот для мониторинга погоды!\n\n"
         "Я могу:\n"
@@ -188,34 +181,28 @@ async def cmd_start(message: Message):
 
 @dp.message(lambda msg: msg.text == "🌤 Погода сейчас")
 async def weather_now(message: Message, state: FSMContext):
-    """Запрос города для текущей погоды"""
     await state.set_state(WeatherStates.waiting_for_city)
     await message.answer("🏙 Введите название города:", reply_markup=types.ReplyKeyboardRemove())
 
 @dp.message(lambda msg: msg.text == "📅 Прогноз на 5 дней")
 async def forecast_5days(message: Message, state: FSMContext):
-    """Запрос города для прогноза"""
     await state.set_state(WeatherStates.waiting_for_forecast_city)
     await message.answer("🏙 Введите город для прогноза:", reply_markup=types.ReplyKeyboardRemove())
 
 @dp.message(WeatherStates.waiting_for_city)
 async def process_city(message: Message, state: FSMContext):
-    """Обработка введенного города для текущей погоды"""
     city = message.text.strip()
     weather_text = get_weather_text(city)
     await message.answer(weather_text, reply_markup=main_keyboard)
     
-    # Сохраняем город в настройки пользователя
     user_id = message.from_user.id
     if user_id not in user_settings:
         user_settings[user_id] = {}
     user_settings[user_id]["city"] = city
-    
     await state.clear()
 
 @dp.message(WeatherStates.waiting_for_forecast_city)
 async def process_forecast_city(message: Message, state: FSMContext):
-    """Обработка введенного города для прогноза"""
     city = message.text.strip()
     forecast_text = get_forecast_text(city)
     await message.answer(forecast_text, reply_markup=main_keyboard)
@@ -223,10 +210,8 @@ async def process_forecast_city(message: Message, state: FSMContext):
 
 @dp.message(lambda msg: msg.text == "⚙️ Настройки уведомлений")
 async def settings_menu(message: Message):
-    """Меню настроек уведомлений"""
     settings = user_settings.get(message.from_user.id, {})
     interval = settings.get("interval", 0)
-    
     interval_text = "🔕 Выключены" if interval == 0 else f"🕐 {interval // 3600} час(а/ов)"
     city = settings.get("city", "не задан")
     
@@ -236,12 +221,10 @@ async def settings_menu(message: Message):
         f"⏰ Интервал: {interval_text}\n\n"
         f"Выберите действие:"
     )
-    
     await message.answer(status_text, reply_markup=settings_keyboard)
 
 @dp.message(lambda msg: msg.text == "🕐 Установить интервал")
 async def set_interval(message: Message, state: FSMContext):
-    """Установка интервала уведомлений"""
     user_id = message.from_user.id
     if user_id not in user_settings or "city" not in user_settings[user_id]:
         await message.answer(
@@ -260,23 +243,16 @@ async def set_interval(message: Message, state: FSMContext):
 
 @dp.message(WeatherStates.waiting_for_interval)
 async def process_interval(message: Message, state: FSMContext):
-    """Обработка введенного интервала"""
     try:
         hours = int(message.text.strip())
-        
         user_id = message.from_user.id
         
         if hours == 0:
             user_settings[user_id]["interval"] = 0
             user_settings[user_id].pop("last_notified", None)
-            await message.answer(
-                "🔕 Уведомления отключены.",
-                reply_markup=settings_keyboard
-            )
+            await message.answer("🔕 Уведомления отключены.", reply_markup=settings_keyboard)
         elif 1 <= hours <= 24:
-            interval_seconds = hours * 3600
-            
-            user_settings[user_id]["interval"] = interval_seconds
+            user_settings[user_id]["interval"] = hours * 3600
             user_settings[user_id]["last_notified"] = datetime.now().timestamp()
             city = user_settings[user_id].get("city", "вашем городе")
             
@@ -286,48 +262,27 @@ async def process_interval(message: Message, state: FSMContext):
                 reply_markup=settings_keyboard
             )
         else:
-            await message.answer(
-                "❌ Пожалуйста, введите число от 1 до 24 (или 0 для отключения).",
-                reply_markup=settings_keyboard
-            )
+            await message.answer("❌ Введите число от 1 до 24 (или 0).", reply_markup=settings_keyboard)
     except ValueError:
-        await message.answer(
-            "❌ Пожалуйста, введите целое число.",
-            reply_markup=settings_keyboard
-        )
-    
+        await message.answer("❌ Пожалуйста, введите целое число.", reply_markup=settings_keyboard)
     await state.clear()
 
 @dp.message(lambda msg: msg.text == "🔕 Отключить уведомления")
 async def disable_notifications(message: Message):
-    """Отключение уведомлений"""
     user_id = message.from_user.id
     if user_id in user_settings:
         user_settings[user_id]["interval"] = 0
         user_settings[user_id].pop("last_notified", None)
-    
-    await message.answer(
-        "🔕 Уведомления отключены. Вы можете включить их снова в любое время.",
-        reply_markup=settings_keyboard
-    )
+    await message.answer("🔕 Уведомления отключены.", reply_markup=settings_keyboard)
 
 @dp.message(lambda msg: msg.text == "⬅️ Назад в меню")
 async def back_to_menu(message: Message):
-    """Возврат в главное меню"""
     await message.answer("Главное меню:", reply_markup=main_keyboard)
 
 async def main():
-    """Запуск бота"""
-    # Запускаем фоновую задачу для уведомлений
     asyncio.create_task(check_and_notify())
-    
     print("🤖 Бот запущен и готов к работе!")
-    print(f"🔗 https://t.me/{(await bot.get_me()).username}")
-    
-    # Запускаем бота
     await dp.start_polling(bot)
 
-if __name__ == "__main__":
-    asyncio.run(main())
 if __name__ == "__main__":
     asyncio.run(main())
