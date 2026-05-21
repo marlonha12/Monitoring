@@ -73,7 +73,7 @@ def get_status_emoji(status_text: str) -> str:
         return "☁️"
     elif "дождь" in status or "ливень" in status or "морось" in status:
         return "🌧"
-    elif "groza" in status or "гроза" in status:
+    elif "гроза" in status:
         return "⛈"
     elif "снег" in status or "метель" in status or "снегопад" in status:
         return "❄️"
@@ -103,8 +103,7 @@ def get_weather_text(city_name: str) -> str:
             f"💧 Влажность: {humidity}%\n"
             f"💨 Ветер: {wind:.1f} м/с\n"
             f"📊 Давление: {pressure} гПа\n"
-            f"{status_emoji} На улице: {status.capitalize()}\n\n"
-            f"🕐 Обновлено: {datetime.now().strftime('%H:%M:%S')}"
+            f"{status_emoji} На улице: {status.capitalize()}"
         )
     except NotFoundError:
         return f"❌ Город '{city_name}' не найден. Проверьте название."
