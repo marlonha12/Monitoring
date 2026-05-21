@@ -11,6 +11,7 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.storage.memory import MemoryStorage
 
 import pyowm
+from pyowm.utils import config as owm_config
 from pyowm.commons.exceptions import NotFoundError, UnauthorizedError
 
 load_dotenv()
@@ -26,11 +27,15 @@ bot = Bot(token=BOT_TOKEN)
 storage = MemoryStorage()
 dp = Dispatcher(storage=storage)
 
-# ЖЕЛЕЗОБЕТОННЫЙ СПОСОБ НАСТРОЙКИ РУССКОГО ЯЗЫКА
-owm = pyowm.OWM(OWM_API_KEY)
+# 1. Получаем дефолтный словарь конфигурации pyowm
+config_dict = owm_config.get_default_config()
+
+# 2. Устанавливаем русский язык
+config_dict['language'] = 'ru'
+
+# 3. Передаем измененный конфиг в именованный параметр `config`
+owm = pyowm.OWM(OWM_API_KEY, config=config_dict)
 mgr = owm.weather_manager()
-# Меняем язык напрямую в словаре конфигурации менеджера
-mgr.config['language'] = 'ru'
 
 # Клавиатура главного меню
 main_keyboard = ReplyKeyboardMarkup(
@@ -322,5 +327,7 @@ async def main():
     # Запускаем бота
     await dp.start_polling(bot)
 
+if __name__ == "__main__":
+    asyncio.run(main())
 if __name__ == "__main__":
     asyncio.run(main())
