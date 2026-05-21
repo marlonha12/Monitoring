@@ -27,13 +27,10 @@ bot = Bot(token=BOT_TOKEN)
 storage = MemoryStorage()
 dp = Dispatcher(storage=storage)
 
-# 1. Получаем дефолтный словарь конфигурации pyowm
+# Настройка конфигурации pyowm для русского языка
 config_dict = owm_config.get_default_config()
-
-# 2. Устанавливаем русский язык
 config_dict['language'] = 'ru'
 
-# 3. Передаем измененный конфиг в именованный параметр `config`
 owm = pyowm.OWM(OWM_API_KEY, config=config_dict)
 mgr = owm.weather_manager()
 
@@ -65,6 +62,25 @@ class WeatherStates(StatesGroup):
 # Хранилище пользовательских настроек
 user_settings = {}
 
+def get_status_emoji(status_text: str) -> str:
+    """Вспомогательная функция для подбора эмодзи по русскому описанию погоды"""
+    status = status_text.lower()
+    if "ясно" in status or "солнечно" in status:
+        return "☀️"
+    elif "малооблачно" in status or "переменная облачность" in status:
+        return "⛅"
+    elif "облачно" in status or "пасмурно" in status:
+        return "☁️"
+    elif "дождь" in status or "ливень" in status or "морось" in status:
+        return "🌧"
+    elif "гроза" in status:
+        return "⛈"
+    elif "снег" in status or "метель" in status or "снегопад" in status:
+        return "❄️"
+    elif "туман" in status or "дымка" in status:
+        return "🌫"
+    return "📝"  # Запасной эмодзи, если статус редкий
+
 def get_weather_text(city_name: str) -> str:
     """Получение и форматирование текущей погоды"""
     try:
@@ -75,10 +91,14 @@ def get_weather_text(city_name: str) -> str:
         feels_like = weather.temperature('celsius')['feels_like']
         humidity = weather.humidity
         wind = weather.wind()['speed']
-        status = weather.detailed_status  # Текст на русском
         pressure = weather.pressure['press']
         
-        weather_emoji = {
+        # Получаем детальный статус на русском и подбираем к нему эмодзи
+        status = weather.detailed_status
+        status_emoji = get_status_emoji(status)
+        
+        # Главный эмодзи для заголовка
+        main_emoji = {
             'clear': '☀️',
             'clouds': '☁️',
             'rain': '🌧',
@@ -88,13 +108,14 @@ def get_weather_text(city_name: str) -> str:
             'fog': '🌫'
         }.get(weather.status.lower(), '🌡')
         
+        # Конструкция "в городе {Название}" решает проблему со склонениями
         return (
-            f"{weather_emoji} Погода в {city_name.title()}:\n\n"
+            f"{main_emoji} Погода в городе {city_name.title()}:\n\n"
             f"🌡 Температура: {temp:.1f}°C (ощущается как {feels_like:.1f}°C)\n"
             f"💧 Влажность: {humidity}%\n"
             f"💨 Ветер: {wind:.1f} м/с\n"
             f"📊 Давление: {pressure} гПа\n"
-            f"📝 {status.capitalize()}\n\n"
+            f"{status_emoji} На улице: {status.capitalize()}\n\n"
             f"🕐 Обновлено: {datetime.now().strftime('%H:%M:%S')}"
         )
     except NotFoundError:
@@ -108,34 +129,24 @@ def get_forecast_text(city_name: str) -> str:
     """Получение прогноза на 5 дней"""
     try:
         forecast = mgr.forecast_at_place(city_name, '3h', limit=40)
-        result = f"📅 Прогноз погоды для {city_name.title()} на 5 дней:\n\n"
+        result = f"📅 Прогноз погоды для города {city_name.title()} на 5 дней:\n\n"
         
         last_date = None
         count = 0
         
         for weather in forecast.forecast:
             date = datetime.fromtimestamp(weather.reference_time())
+            # Показываем прогноз только на дневное время
             if date.hour in [12, 15] and date.date() != last_date:
                 if count >= 5:
                     break
                     
                 temp = weather.temperature('celsius')['temp']
                 status = weather.detailed_status
-                
-                main_status = weather.status.lower()
-                if main_status == 'clear':
-                    emoji = "☀️"
-                elif main_status == 'clouds':
-                    emoji = "☁️"
-                elif main_status == 'rain':
-                    emoji = "🌧"
-                elif main_status == 'snow':
-                    emoji = "❄️"
-                else:
-                    emoji = "🌡"
+                status_emoji = get_status_emoji(status)
                 
                 result += f"📅 {date.strftime('%d.%m.%Y')}:\n"
-                result += f"   {emoji} {temp:.1f}°C | {status.capitalize()}\n\n"
+                result += f"   {status_emoji} {temp:.1f}°C | {status.capitalize()}\n\n"
                 
                 last_date = date.date()
                 count += 1
@@ -217,7 +228,7 @@ async def settings_menu(message: Message):
     
     status_text = (
         f"⚙️ Настройки уведомлений:\n\n"
-        f"📍 Город: {city}\n"
+        f"📍 Город: {city.title()}\n"
         f"⏰ Интервал: {interval_text}\n\n"
         f"Выберите действие:"
     )
@@ -258,7 +269,7 @@ async def process_interval(message: Message, state: FSMContext):
             
             await message.answer(
                 f"✅ Интервал уведомлений установлен на {hours} час(а/ов).\n"
-                f"Я буду присылать погоду в {city} каждые {hours} часа(ов).",
+                f"Я буду присылать погоду в городе {city.title()} каждые {hours} часа(ов).",
                 reply_markup=settings_keyboard
             )
         else:
@@ -281,7 +292,7 @@ async def back_to_menu(message: Message):
 
 async def main():
     asyncio.create_task(check_and_notify())
-    print("🤖 Бот запущен и готов к работе!")
+    print("Бот запущен и готов к работе!")
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
