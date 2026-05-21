@@ -13,7 +13,6 @@ from aiogram.fsm.storage.memory import MemoryStorage
 import pyowm
 from pyowm.commons.exceptions import NotFoundError, UnauthorizedError
 load_dotenv()
-# ВАШИ КЛЮЧИ (уже вставлены)
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 OWM_API_KEY = os.getenv("OWM_API_KEY")
 
@@ -27,7 +26,9 @@ dp = Dispatcher(storage=storage)
 
 # Инициализация OWM
 owm = pyowm.OWM(OWM_API_KEY)
-mgr = owm.weather_manager()
+config_dict = pyowm.utils.config.get_default_config()
+config_dict['language'] = 'ru'
+mgr = owm.weather_manager(config_dict=config_dict)
 
 # Клавиатура главного меню
 main_keyboard = ReplyKeyboardMarkup(
@@ -303,7 +304,7 @@ async def main():
     # Запускаем фоновую задачу для уведомлений
     asyncio.create_task(check_and_notify())
     
-    print("🤖 Бот запущен и готов к работе!")
+    print("Бот запущен!")
     print(f"🔗 https://t.me/{(await bot.get_me()).username}")
     
     # Запускаем бота
