@@ -279,7 +279,7 @@ async def back_to_menu(message: Message):
 
 async def main():
     asyncio.create_task(check_and_notify())
-    print("🤖 Бот запущен и готов к работе!")
+    print("Бот запущен и готов к работе!")
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
